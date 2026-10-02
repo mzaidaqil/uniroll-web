@@ -26,7 +26,7 @@ UniRoll started as a university group assignment (an Android app with a local Ro
 | Database | PostgreSQL 18, Flyway migrations, Hibernate |
 | API docs | springdoc-openapi (Swagger UI) |
 | Testing | JUnit 5, Mockito, `@WebMvcTest`, `@DataJpaTest`, Testcontainers, JaCoCo |
-| Build | Maven (wrapper included) |
+| Build and run | Maven (wrapper included), npm, Docker multi-stage builds, Docker Compose, nginx |
 
 ## API
 
@@ -86,7 +86,24 @@ backend/src/main/java/org/zayed/unirollweb/
 backend/src/main/resources/db/migration/   Flyway SQL migrations
 ```
 
-## Running locally
+## Running with Docker
+
+The quickest way to run everything. Only Docker is needed:
+
+```bash
+docker compose up --build
+```
+
+| URL | What |
+|---|---|
+| <http://localhost:3000> | The app (nginx serving React, forwarding `/api` to the backend) |
+| <http://localhost:8081/swagger-ui.html> | Swagger UI |
+
+Compose starts PostgreSQL, waits until it accepts connections, then starts the backend (Flyway creates the tables) and the frontend. Stop with `docker compose down`; add `-v` to also delete the database volume.
+
+Both images use multi-stage builds: the backend is compiled with the JDK and Maven but runs on a JRE-only image as a non-root user; the frontend is built with Node and served by nginx, which also handles React Router URLs and long-term caching of hashed assets.
+
+## Running locally (for development)
 
 **Requirements:** Java 21, Node.js 20+, and Docker (for the database and the tests).
 
@@ -154,6 +171,6 @@ Docker must be running: database tests start a throwaway PostgreSQL container wi
 - [x] Subject and enrollment API with business rules
 - [x] Unit, web-layer and integration tests with coverage
 - [x] React + TypeScript frontend
-- [ ] Docker images and Docker Compose
+- [x] Docker images and Docker Compose
 - [ ] GitHub Actions CI
 - [ ] Deployment to Google Cloud Run

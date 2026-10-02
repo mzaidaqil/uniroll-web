@@ -1,0 +1,5 @@
+# Not sent to Docker when building: npm ci reinstalls dependencies, npm run build recreates dist
+node_modules/
+dist/
+Dockerfile
+.dockerignore

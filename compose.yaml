@@ -1,0 +1,47 @@
+# The whole stack on one machine:  docker compose up --build
+#   App:      http://localhost:3000
+#   Swagger:  http://localhost:8081/swagger-ui.html
+# Containers find each other by service name (db, backend) on compose's private network.
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: uniroll
+      POSTGRES_USER: uniroll
+      POSTGRES_PASSWORD: uniroll
+    volumes:
+      - db-data:/var/lib/postgresql # data survives "docker compose down"; "down -v" deletes it
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uniroll -d uniroll"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No "ports": the database is only reachable from the other containers,
+    # which also avoids clashing with a local PostgreSQL on 5432
+
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/uniroll
+      DB_USERNAME: uniroll
+      DB_PASSWORD: uniroll
+      # Local-only default; set JWT_SECRET in your shell or a .env file to override
+      JWT_SECRET: ${JWT_SECRET:-compose-local-secret-not-for-production-0123456789}
+    depends_on:
+      db:
+        condition: service_healthy # wait until Postgres accepts connections, not just until it starts
+    ports:
+      - "8081:8080"
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8080
+    depends_on:
+      - backend
+    ports:
+      - "3000:8080"
+
+volumes:
+  db-data:

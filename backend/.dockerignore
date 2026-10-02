@@ -1,0 +1,7 @@
+# Not sent to Docker when building: build output and IDE files
+target/
+.idea/
+*.iml
+HELP.md
+Dockerfile
+.dockerignore
