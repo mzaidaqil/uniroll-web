@@ -1,0 +1,79 @@
+# Runs on GitHub's machines on every push to main and every pull request.
+# Results: the Actions tab, and a ✅/❌ next to each commit.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven # reuse downloaded libraries between runs
+
+      # verify = compile + all tests + JaCoCo report. Docker is preinstalled on ubuntu-latest,
+      # so the Testcontainers tests start real PostgreSQL containers here too.
+      - name: Build and test
+        run: ./mvnw -B verify
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import csv, glob, re
+          rows = list(csv.DictReader(open("target/site/jacoco/jacoco.csv")))
+          total = lambda k: sum(int(r[k]) for r in rows)
+          pct = lambda k: 100 * total(k + "_COVERED") / (total(k + "_COVERED") + total(k + "_MISSED"))
+          tests = sum(int(re.search(r'tests="(\d+)"', open(f).read()).group(1))
+                      for f in glob.glob("target/surefire-reports/TEST-*.xml"))
+          print("### Backend tests")
+          print(f"| Tests | Line coverage | Branch coverage |\n|---|---|---|")
+          print(f"| {tests} | {pct('LINE'):.1f}% | {pct('BRANCH'):.1f}% |")
+          EOF
+
+      # Downloadable from the run's page: open index.html for the full coverage report
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+
+  frontend:
+    name: Frontend lint and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci # exact versions from package-lock.json
+      - run: npm run lint
+      - run: npm run build # includes the TypeScript type check
+
+  docker:
+    name: Docker images build
+    needs: [backend, frontend] # only after both jobs above pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker compose build

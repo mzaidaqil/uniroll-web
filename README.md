@@ -1,5 +1,7 @@
 # UniRoll
 
+[![CI](https://github.com/mzaidaqil/uniroll-web/actions/workflows/ci.yml/badge.svg)](https://github.com/mzaidaqil/uniroll-web/actions/workflows/ci.yml)
+
 A full-stack course enrollment platform: lecturers create and manage subjects, students browse, enroll in and drop them.
 
 UniRoll started as a university group assignment (an Android app with a local Room/SQLite database). This repository is a solo rebuild as a production-style web application: a React frontend, a secured Spring Boot REST API, a PostgreSQL database and automated tests.
