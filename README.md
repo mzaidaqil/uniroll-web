@@ -1,8 +1,8 @@
 # UniRoll
 
-A course enrollment platform: lecturers create and manage subjects, students browse, enroll in and drop them.
+A full-stack course enrollment platform: lecturers create and manage subjects, students browse, enroll in and drop them.
 
-UniRoll started as a university group assignment (an Android app with a local Room/SQLite database). This repository is a solo rebuild as a production-style web application with a secured REST API, a PostgreSQL database and automated tests.
+UniRoll started as a university group assignment (an Android app with a local Room/SQLite database). This repository is a solo rebuild as a production-style web application: a React frontend, a secured Spring Boot REST API, a PostgreSQL database and automated tests.
 
 ## Features
 
@@ -20,8 +20,8 @@ UniRoll started as a university group assignment (an Android app with a local Ro
 
 | Area | Technology |
 |---|---|
-| Language | Java 21 |
-| Framework | Spring Boot 4 (Web MVC, Data JPA, Validation, Actuator) |
+| Frontend | React 19, TypeScript, Vite, React Router, TanStack Query, Tailwind CSS |
+| Backend | Java 21, Spring Boot 4 (Web MVC, Data JPA, Validation, Actuator) |
 | Security | Spring Security, OAuth2 Resource Server (JWT, HS256), BCrypt |
 | Database | PostgreSQL 18, Flyway migrations, Hibernate |
 | API docs | springdoc-openapi (Swagger UI) |
@@ -37,7 +37,7 @@ All endpoints except register and login need an `Authorization: Bearer <token>` 
 | POST | `/api/auth/register` | Public | Create an account |
 | POST | `/api/auth/login` | Public | Get a JWT |
 | GET | `/api/users/me` | Logged in | Current user |
-| GET | `/api/subjects?search=&page=&size=` | Logged in | Search subjects (paged, sorted by code) |
+| GET | `/api/subjects?search=&page=&size=&mine=` | Logged in | Search subjects (paged, sorted by code); `mine=true` returns only your own |
 | GET | `/api/subjects/{id}` | Logged in | One subject with its enrolled count |
 | POST | `/api/subjects` | Lecturer | Create a subject |
 | PUT | `/api/subjects/{id}` | Owning lecturer | Update a subject |
@@ -66,10 +66,17 @@ Errors use the standard [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) probl
 - **Login doesn't leak which emails exist.** Wrong password and unknown email return the same 401, and both run a BCrypt check so their response times match.
 - **No N+1 queries.** Subject lists load lecturers with an entity graph and seat counts with a single grouped query per page.
 - **Schema under version control.** Flyway owns the schema; Hibernate only validates that the entities match it.
+- **Server state handled by TanStack Query.** The frontend caches API data and refetches it automatically after a change (e.g. enrolling updates seat counts and credit hours) instead of hand-written loading logic.
 
 ## Project structure
 
 ```
+frontend/src/
+├── api/          typed API client (adds the JWT, turns errors into ApiError)
+├── auth/         logged-in user context and role-based route guards
+├── components/   layout, form fields, pagination, shared styles
+└── pages/        login, register, student and lecturer pages
+
 backend/src/main/java/org/zayed/unirollweb/
 ├── auth/         register, login, JWT creation
 ├── user/         User entity, /api/users/me
@@ -81,7 +88,7 @@ backend/src/main/resources/db/migration/   Flyway SQL migrations
 
 ## Running locally
 
-**Requirements:** Java 21, and Docker (for the database and the tests).
+**Requirements:** Java 21, Node.js 20+, and Docker (for the database and the tests).
 
 1. Start PostgreSQL:
 
@@ -98,7 +105,17 @@ backend/src/main/resources/db/migration/   Flyway SQL migrations
    ./mvnw spring-boot:run
    ```
 
-3. Open Swagger UI at <http://localhost:8080/swagger-ui.html>. Register, log in, click **Authorize** and paste the `accessToken`.
+3. Start the frontend in a second terminal:
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+   Open <http://localhost:5173> and register as a student or lecturer. In development, Vite forwards `/api` requests to the backend on port 8080.
+
+4. The API can also be explored in Swagger UI at <http://localhost:8080/swagger-ui.html>: register, log in, click **Authorize** and paste the `accessToken`.
 
 ### Configuration
 
@@ -123,12 +140,12 @@ Docker must be running: database tests start a throwaway PostgreSQL container wi
 
 | Layer | What it checks | Tests |
 |---|---|---|
-| Unit (JUnit 5 + Mockito) | Service rules in isolation, e.g. credit-hour limit, lock order, owner checks | 28 |
-| Web (`@WebMvcTest`) | Security rules, validation, status codes and JSON | 21 |
+| Unit (JUnit 5 + Mockito) | Service rules in isolation, e.g. credit-hour limit, lock order, owner checks | 29 |
+| Web (`@WebMvcTest`) | Security rules, validation, status codes and JSON | 22 |
 | Repository (`@DataJpaTest` + Testcontainers) | Database constraints and queries on real PostgreSQL | 14 |
-| Integration (`@SpringBootTest` + Testcontainers) | Full HTTP flows, including concurrent enrollment | 27 |
+| Integration (`@SpringBootTest` + Testcontainers) | Full HTTP flows, including concurrent enrollment | 28 |
 
-**90 tests**, with **98% line** and **92% branch** coverage measured by JaCoCo (no classes excluded). The HTML report is written to `backend/target/site/jacoco/index.html`.
+**93 backend tests**, with **98% line** and **93% branch** coverage measured by JaCoCo (no classes excluded). The HTML report is written to `backend/target/site/jacoco/index.html`.
 
 ## Roadmap
 
@@ -136,7 +153,7 @@ Docker must be running: database tests start a throwaway PostgreSQL container wi
 - [x] JWT authentication and role-based access
 - [x] Subject and enrollment API with business rules
 - [x] Unit, web-layer and integration tests with coverage
-- [ ] React + TypeScript frontend
+- [x] React + TypeScript frontend
 - [ ] Docker images and Docker Compose
 - [ ] GitHub Actions CI
 - [ ] Deployment to Google Cloud Run

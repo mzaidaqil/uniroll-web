@@ -30,9 +30,14 @@ public class SubjectService {
         this.userRepository = userRepository;
     }
 
+    // lecturerId null = every subject; otherwise only that lecturer's subjects
     @Transactional(readOnly = true)
-    public Page<SubjectResponse> search(String search, int page, int size) {
-        Page<Subject> subjects = subjectRepository.search(search.trim(), PageRequest.of(page, size, Sort.by("code")));
+    public Page<SubjectResponse> search(String search, Long lecturerId, int page, int size) {
+        String term = search.trim();
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("code"));
+        Page<Subject> subjects = lecturerId == null
+                ? subjectRepository.search(term, pageRequest)
+                : subjectRepository.searchByLecturer(term, lecturerId, pageRequest);
         if (subjects.isEmpty()) {
             return subjects.map(subject -> SubjectResponse.from(subject, 0));
         }

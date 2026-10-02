@@ -2,9 +2,11 @@ import { Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from './auth/RequireAuth'
 import { useAuth } from './auth/useAuth'
 import { Layout } from './components/Layout'
+import { ClassListPage } from './pages/ClassListPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyEnrollmentsPage } from './pages/MyEnrollmentsPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { SubjectFormPage } from './pages/SubjectFormPage'
 import { SubjectsPage } from './pages/SubjectsPage'
 import { TeachingPage } from './pages/TeachingPage'
 
@@ -33,6 +35,9 @@ export default function App() {
 
           <Route element={<RequireAuth role="LECTURER" />}>
             <Route path="/teaching" element={<TeachingPage />} />
+            <Route path="/teaching/new" element={<SubjectFormPage />} />
+            <Route path="/teaching/:id/edit" element={<SubjectFormPage />} />
+            <Route path="/teaching/:id/students" element={<ClassListPage />} />
           </Route>
         </Route>
       </Route>

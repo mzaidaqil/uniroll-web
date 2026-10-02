@@ -18,6 +18,8 @@ import org.zayed.unirollweb.user.UserRepository;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -113,6 +115,25 @@ class SubjectIntegrationTest {
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.page.totalElements").value(3))
                 .andExpect(jsonPath("$.page.totalPages").value(2));
+    }
+
+    @Test
+    void mineReturnsOnlyCallersSubjects() throws Exception {
+        String owner = tokenFor(Role.LECTURER, "Dr Tan");
+        String otherLecturer = tokenFor(Role.LECTURER, "Dr Lim");
+        String word = "Mine" + UUID.randomUUID().toString().substring(0, 8);
+        createSubject(owner, uniqueCode(), word + " A", 3, 30).andExpect(status().isCreated());
+        createSubject(owner, uniqueCode(), word + " B", 3, 30).andExpect(status().isCreated());
+        // Matches the search by name but belongs to someone else: must not appear with mine=true
+        createSubject(otherLecturer, uniqueCode(), word + " C", 3, 30).andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/subjects").param("search", word).param("mine", "true")
+                        .header("Authorization", owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].lecturer.name", everyItem(is("Dr Tan"))));
+        mockMvc.perform(get("/api/subjects").param("search", word).header("Authorization", owner))
+                .andExpect(jsonPath("$.page.totalElements").value(3));
     }
 
     @Test

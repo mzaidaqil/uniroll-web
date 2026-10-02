@@ -38,13 +38,17 @@ public class SubjectController {
         this.enrollmentService = enrollmentService;
     }
 
-    // GET /api/subjects?search=prog&page=0&size=20, sorted by code
+    // GET /api/subjects?search=prog&page=0&size=20, sorted by code.
+    // mine=true limits it to the caller's own subjects; the id comes from the token, never the URL.
     @GetMapping
     public PagedModel<SubjectResponse> search(
             @RequestParam(defaultValue = "") String search,
+            @RequestParam(defaultValue = "false") boolean mine,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int size) {
-        return new PagedModel<>(subjectService.search(search, page, size));
+            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int size,
+            @AuthenticationPrincipal Jwt jwt) {
+        Long lecturerId = mine ? CurrentUser.id(jwt) : null;
+        return new PagedModel<>(subjectService.search(search, lecturerId, page, size));
     }
 
     @GetMapping("/{id}")

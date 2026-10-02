@@ -62,7 +62,7 @@ class SubjectControllerTest {
 
     @Test
     void listPassesSearchAndPagingToService() throws Exception {
-        when(subjectService.search("prog", 1, 5))
+        when(subjectService.search("prog", null, 1, 5))
                 .thenReturn(new PageImpl<>(List.of(sampleSubject()), PageRequest.of(1, 5), 6));
 
         mockMvc.perform(get("/api/subjects").param("search", "prog").param("page", "1").param("size", "5")
@@ -72,6 +72,15 @@ class SubjectControllerTest {
                 .andExpect(jsonPath("$.content[0].lecturer.name").value("Dr Tan"))
                 .andExpect(jsonPath("$.page.number").value(1))
                 .andExpect(jsonPath("$.page.totalElements").value(6));
+    }
+
+    @Test
+    void mineTakesLecturerIdFromToken() throws Exception {
+        when(subjectService.search("", 1L, 0, 20)).thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+        mockMvc.perform(get("/api/subjects").param("mine", "true").with(lecturer(1)))
+                .andExpect(status().isOk());
+        verify(subjectService).search("", 1L, 0, 20);
     }
 
     @Test

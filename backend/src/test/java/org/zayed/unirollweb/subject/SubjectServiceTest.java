@@ -92,9 +92,21 @@ class SubjectServiceTest {
         when(subjectRepository.search(eq("prog"), any(Pageable.class))).thenReturn(page);
         when(enrollmentRepository.countBySubjectIds(List.of(SUBJECT_ID, 11L))).thenReturn(List.of(count(SUBJECT_ID, 5)));
 
-        List<SubjectResponse> results = subjectService.search("  prog ", 0, 20).getContent();
+        List<SubjectResponse> results = subjectService.search("  prog ", null, 0, 20).getContent();
 
         assertThat(results).extracting(SubjectResponse::enrolledCount).containsExactly(5L, 0L);
+    }
+
+    @Test
+    void searchWithLecturerIdUsesLecturerOnlyQuery() {
+        when(subjectRepository.searchByLecturer(eq("prog"), eq(OWNER_ID), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(subject)));
+        when(enrollmentRepository.countBySubjectIds(List.of(SUBJECT_ID))).thenReturn(List.of());
+
+        List<SubjectResponse> results = subjectService.search("prog", OWNER_ID, 0, 20).getContent();
+
+        assertThat(results).extracting(SubjectResponse::code).containsExactly("CS101");
+        verify(subjectRepository, never()).search(any(), any());
     }
 
     @Test

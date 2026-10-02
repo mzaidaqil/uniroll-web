@@ -28,6 +28,17 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
             """)
     Page<Subject> search(@Param("search") String search, Pageable pageable);
 
+    // Same search, limited to one lecturer's subjects (the lecturer's "My subjects" page)
+    @EntityGraph(attributePaths = "lecturer")
+    @Query("""
+            SELECT s FROM Subject s
+            WHERE s.lecturer.id = :lecturerId
+              AND (LOWER(s.code) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')))
+            """)
+    Page<Subject> searchByLecturer(@Param("search") String search, @Param("lecturerId") Long lecturerId,
+                                   Pageable pageable);
+
     // SELECT ... FOR UPDATE: other transactions that want this row wait until we commit.
     // Used wherever capacity is checked, so two requests can't both take the last seat.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
