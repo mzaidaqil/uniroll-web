@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import org.zayed.unirollweb.user.User;
 
 import java.time.Instant;
+import java.util.Locale;
 
 @Entity
 @Table(name = "subjects")
@@ -46,16 +47,33 @@ public class Subject {
     }
 
     public Subject(String code, String name, int creditHours, int capacity, User lecturer) {
-        this.code = code;
+        this.code = normalizeCode(code);
         this.name = name;
         this.creditHours = creditHours;
         this.capacity = capacity;
         this.lecturer = lecturer;
     }
 
+    // "cs101 " and "CS101" are the same subject
+    public static String normalizeCode(String code) {
+        return code.trim().toUpperCase(Locale.ROOT);
+    }
+
     @PrePersist
     void onCreate() {
         createdAt = Instant.now();
+    }
+
+    // Hibernate notices the changed fields and issues the UPDATE when the transaction commits
+    public void update(String code, String name, int creditHours, int capacity) {
+        this.code = normalizeCode(code);
+        this.name = name;
+        this.creditHours = creditHours;
+        this.capacity = capacity;
+    }
+
+    public boolean isOwnedBy(Long userId) {
+        return lecturer.getId().equals(userId);
     }
 
     public Long getId() {

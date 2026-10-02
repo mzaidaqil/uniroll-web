@@ -1,5 +1,6 @@
 package org.zayed.unirollweb.auth;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +12,7 @@ import org.zayed.unirollweb.user.UserResponse;
 
 @RestController
 @RequestMapping("/api/auth")
+@SecurityRequirements // empty: these endpoints need no token, so Swagger shows no lock
 public class AuthController {
 
     private final AuthService authService;
