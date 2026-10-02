@@ -19,8 +19,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.zayed.unirollweb.common.CurrentUser;
+import org.zayed.unirollweb.enrollment.EnrolledStudentResponse;
+import org.zayed.unirollweb.enrollment.EnrollmentService;
 
 import java.net.URI;
+import java.util.List;
 
 // Role rules (LECTURER for POST/PUT/DELETE) are in SecurityConfig; owner checks are in SubjectService
 @RestController
@@ -28,9 +31,11 @@ import java.net.URI;
 public class SubjectController {
 
     private final SubjectService subjectService;
+    private final EnrollmentService enrollmentService;
 
-    public SubjectController(SubjectService subjectService) {
+    public SubjectController(SubjectService subjectService, EnrollmentService enrollmentService) {
         this.subjectService = subjectService;
+        this.enrollmentService = enrollmentService;
     }
 
     // GET /api/subjects?search=prog&page=0&size=20, sorted by code
@@ -64,5 +69,11 @@ public class SubjectController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteSubject(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         subjectService.deleteSubject(id, CurrentUser.id(jwt));
+    }
+
+    // The owning lecturer's class list
+    @GetMapping("/{id}/students")
+    public List<EnrolledStudentResponse> getStudents(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return enrollmentService.getStudents(id, CurrentUser.id(jwt));
     }
 }
