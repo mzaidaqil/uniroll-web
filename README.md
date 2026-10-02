@@ -174,5 +174,5 @@ Docker must be running: database tests start a throwaway PostgreSQL container wi
 - [x] Unit, web-layer and integration tests with coverage
 - [x] React + TypeScript frontend
 - [x] Docker images and Docker Compose
-- [ ] GitHub Actions CI
+- [x] GitHub Actions CI
 - [ ] Deployment to Google Cloud Run

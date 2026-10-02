@@ -1,0 +1,57 @@
+# Render Blueprint: both services as code. Render reads this file from the repo
+# (Dashboard → New → Blueprint) and redeploys on every push to main.
+
+services:
+  # Spring Boot API, built from backend/Dockerfile
+  - type: web
+    name: uniroll-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      # Neon PostgreSQL (direct connection, SSL required). Render sets PORT itself.
+      - key: DB_URL
+        value: jdbc:postgresql://ep-cool-leaf-b3bi5res.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+      - key: DB_USERNAME
+        value: neondb_owner
+      - key: DB_PASSWORD
+        sync: false # entered once in the Render dashboard; never stored in the repo
+      - key: JWT_SECRET
+        generateValue: true # Render generates a random 256-bit value
+      # Small pool: the free Neon database allows a limited number of connections
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE
+        value: "5"
+
+  # React app as static files on Render's CDN (never sleeps)
+  - type: web
+    name: uniroll-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    buildFilter:
+      paths:
+        - frontend/**
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+    headers:
+      # Vite puts a content hash in these file names, so they can be cached for a year
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      # Same job as nginx in Docker: forward API calls to the backend (one origin, no CORS)...
+      - type: rewrite
+        source: /api/*
+        destination: https://uniroll-backend.onrender.com/api/*
+      # ...and let React Router handle every other URL
+      - type: rewrite
+        source: /*
+        destination: /index.html
